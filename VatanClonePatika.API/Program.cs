@@ -79,7 +79,7 @@ builder.Services.AddRepositories(builder.Configuration).AddServices(builder.Conf
 
 var app = builder.Build();
 
-// Seed işlemini en başa alıyoruz
+// Seed
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
