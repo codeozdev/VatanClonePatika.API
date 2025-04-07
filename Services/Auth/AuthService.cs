@@ -1,14 +1,11 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Repositories.Identity;
 using Services.Auth.Dtos;
-using Services.Auth.Helpers;
-using Microsoft.AspNetCore.Http;
 using Services.Auth.DTOs;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+using Services.Auth.Helpers;
 
 namespace Services.Auth;
 
@@ -74,24 +71,20 @@ public class AuthService(IAuthRepository authRepository, IMapper mapper, IConfig
         if (!result.Succeeded)
             return (result, null);
 
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.UserName)
-        };
+        // Kullanıcının rollerini al
+        var roles = await authRepository.GetUserRolesAsync(user); // Var olan metodu kullanıyoruz
 
         var token = HelperGenerateJwtToken.GenerateToken(
             user.Id,
             user.Email,
             configuration["Jwt:Key"]!,
             configuration["Jwt:Issuer"]!,
-            configuration["Jwt:Audience"]!
+            configuration["Jwt:Audience"]!,
+            roles  // Rolleri token'a ekliyoruz
         );
 
         return (result, token);
     }
-
 
 
 
@@ -123,7 +116,7 @@ public class AuthService(IAuthRepository authRepository, IMapper mapper, IConfig
     {
         if (!IsUserInRole("Admin"))
         {
-            return new List<RoleDto>();
+            return [];
         }
         var roles = await authRepository.GetRolesAsync();
         return [.. roles.Select(r => new RoleDto { Name = r })];
@@ -144,7 +137,7 @@ public class AuthService(IAuthRepository authRepository, IMapper mapper, IConfig
     {
         if (!IsUserInRole("Admin"))
         {
-            return new List<UserRolesDto>();
+            return [];
         }
         var usersWithRoles = await authRepository.GetAllUsersWithRolesAsync();
         return [.. usersWithRoles.Select(x => new UserRolesDto

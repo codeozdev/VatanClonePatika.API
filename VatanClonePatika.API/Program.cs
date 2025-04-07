@@ -5,10 +5,12 @@ using Microsoft.IdentityModel.Tokens;
 using Repositories;
 using Repositories.Extensions;
 using Repositories.Identity;
+using Repositories.Seeds;
 using Scalar.AspNetCore;
 using Services;
 using Services.Auth;
 using Services.Extensions;
+using Services.Filters;
 using Services.Orders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -76,6 +78,36 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddRepositories(builder.Configuration).AddServices(builder.Configuration);
 
 var app = builder.Build();
+
+// Seed işlemini en başa alıyoruz
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var userManager = services.GetRequiredService<UserManager<AppUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        await DatabaseSeeder.SeedAsync(userManager, roleManager);
+
+        // Admin kullanıcısını ve rolünü kontrol edelim
+        var adminUser = await userManager.FindByEmailAsync("admin@example.com");
+        if (adminUser != null)
+        {
+            var roles = await userManager.GetRolesAsync(adminUser);
+            Console.WriteLine($"Admin kullanıcısının rolleri: {string.Join(", ", roles)}");
+        }
+        else
+        {
+            Console.WriteLine("Admin kullanıcısı bulunamadı!");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Hata: {ex.Message}");
+    }
+}
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

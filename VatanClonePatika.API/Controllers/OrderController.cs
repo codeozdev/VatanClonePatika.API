@@ -9,30 +9,29 @@ using Repositories.Orders;
 
 namespace VatanClonePatika.API.Controllers;
 
-
+[ApiController]
+[Route("api/[controller]")]
 [Authorize]
-public class OrderController(IOrderService orderService) : CustomBaseController
+[TimeRestrictedAccess] // default 09:00-22:00 arası sipariş alınır
+public class OrderController : CustomBaseController
 {
+    private readonly IOrderService _orderService;
 
+    public OrderController(IOrderService orderService)
+    {
+        _orderService = orderService;
+    }
 
     [HttpPost]
     public async Task<IActionResult> CreateOrder(CreateOrderRequest request)
     {
-        // Tüm claim'leri kontrol edelim
-        foreach (var claim in User.Claims)
-        {
-            Console.WriteLine($"Claim Type: {claim.Type}, Value: {claim.Value}");
-        }
-
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        Console.WriteLine($"UserId from token: {userId}");
-
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { error = "Kullanıcı girişi yapılmamış." });
 
         try
         {
-            var result = await orderService.CreateOrderAsync(request, userId);
+            var result = await _orderService.CreateOrderAsync(request, userId);
             return Ok(result);
         }
         catch (DbUpdateException ex)
@@ -54,7 +53,7 @@ public class OrderController(IOrderService orderService) : CustomBaseController
 
         try
         {
-            var orders = await orderService.GetUserOrdersAsync(userId);
+            var orders = await _orderService.GetUserOrdersAsync(userId);
             return Ok(orders);
         }
         catch (Exception ex)
@@ -71,6 +70,6 @@ public class OrderController(IOrderService orderService) : CustomBaseController
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
-        return CreateActionResult(await orderService.DeleteOrderAsync(id, userId));
+        return Ok(await _orderService.DeleteOrderAsync(id, userId));
     }
 }

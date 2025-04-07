@@ -38,7 +38,4 @@ public class HelperGenerateJwtToken
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
-
-
-
 }
